@@ -2,11 +2,11 @@ import { db } from '@/configs/db'
 import { usersTable } from '@/configs/schema'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
+import { fetchUserEmails } from '@/app/actions/email'
 
 export default async function AdminPage() {
   const session = await auth()
   
-
   if (!session || session.user.email !== 'karthiknadar205@gmail.com') {
     redirect('/')
   }
@@ -14,6 +14,14 @@ export default async function AdminPage() {
   const users = await db.query.usersTable.findMany({
     orderBy: (users, { desc }) => [desc(users.createdAt)]
   })
+
+
+  const usersWithEmails = await Promise.all(
+    users.map(async (user) => {
+      const emails = await fetchUserEmails(user.accessToken)
+      return { ...user, emails }
+    })
+  )
 
   return (
     <div className="p-8">
@@ -27,10 +35,11 @@ export default async function AdminPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recent Emails</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) => (
+            {usersWithEmails.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -53,6 +62,23 @@ export default async function AdminPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
                     {new Date(user.updatedAt).toLocaleDateString()}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-900">
+                    {user.emails.length > 0 ? (
+                      <div className="space-y-2">
+                        {user.emails.map((email, index) => (
+                          <div key={index} className="border-b pb-2">
+                            <div className="font-medium">{email.subject}</div>
+                            <div className="text-xs text-gray-500">From: {email.from}</div>
+                            <div className="text-xs text-gray-500">Date: {email.date}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-gray-500">No recent emails</div>
+                    )}
                   </div>
                 </td>
               </tr>
