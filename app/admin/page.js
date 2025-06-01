@@ -21,7 +21,7 @@ export default async function AdminPage() {
       let emails = []
       if (user.provider === 'google') {
         emails = await fetchUserEmails(user.accessToken)
-      } else if (user.provider === 'azure-ad') {
+      } else if (user.provider === 'microsoft-entra-id') {
         emails = await fetchMicrosoftEmails(user.accessToken)
       }
       return { ...user, emails }

@@ -1,17 +1,13 @@
 'use server'
 
 import { Client } from '@microsoft/microsoft-graph-client'
-import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials'
 
 export async function fetchMicrosoftEmails(accessToken) {
   try {
-    const authProvider = new TokenCredentialAuthenticationProvider({
-      getAccessToken: async () => accessToken
-    })
-
     const client = Client.init({
-      authProvider,
-      defaultVersion: 'v1.0'
+      authProvider: (done) => {
+        done(null, accessToken)
+      }
     })
 
     const response = await client
