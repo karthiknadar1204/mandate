@@ -3,10 +3,11 @@ import { usersTable } from '@/configs/schema'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { fetchUserEmails } from '@/app/actions/email'
+import { fetchMicrosoftEmails } from '@/app/actions/microsoft-email'
 
 export default async function AdminPage() {
   const session = await auth()
-  
+
   if (!session || session.user.email !== 'karthiknadar205@gmail.com') {
     redirect('/')
   }
@@ -15,10 +16,14 @@ export default async function AdminPage() {
     orderBy: (users, { desc }) => [desc(users.createdAt)]
   })
 
-
   const usersWithEmails = await Promise.all(
     users.map(async (user) => {
-      const emails = await fetchUserEmails(user.accessToken)
+      let emails = []
+      if (user.provider === 'google') {
+        emails = await fetchUserEmails(user.accessToken)
+      } else if (user.provider === 'azure-ad') {
+        emails = await fetchMicrosoftEmails(user.accessToken)
+      }
       return { ...user, emails }
     })
   )
@@ -33,6 +38,7 @@ export default async function AdminPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recent Emails</th>
@@ -53,6 +59,9 @@ export default async function AdminPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{user.email}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 capitalize">{user.provider}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
