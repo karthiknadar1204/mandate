@@ -11,7 +11,8 @@ const Page = async () => {
             email: session.user.email,
             image: session.user.image,
             accessToken: session.accessToken,
-            refreshToken: session.refreshToken
+            refreshToken: session.refreshToken,
+            provider: session.provider
         })
 
         if (!result.success) {

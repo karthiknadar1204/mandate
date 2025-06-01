@@ -20,6 +20,7 @@ export async function createOrUpdateUser(userData) {
           image: userData.image,
           accessToken: userData.accessToken,
           refreshToken: userData.refreshToken,
+          provider: userData.provider,
           updatedAt: new Date()
         })
         .where(eq(usersTable.email, userData.email))
@@ -37,6 +38,7 @@ export async function createOrUpdateUser(userData) {
         image: userData.image,
         accessToken: userData.accessToken,
         refreshToken: userData.refreshToken,
+        provider: userData.provider,
         createdAt: new Date(),
         updatedAt: new Date()
       })
