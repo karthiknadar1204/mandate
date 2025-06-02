@@ -33,9 +33,9 @@ export default async function AdminPage() {
     users.map(async (user) => {
       let emails = []
       if (user.provider === 'google') {
-        emails = await fetchUserEmails(user.accessToken)
+        emails = await fetchUserEmails(user.accessToken, user.email)
       } else if (user.provider === 'microsoft-entra-id') {
-        emails = await fetchMicrosoftEmails(user.accessToken)
+        emails = await fetchMicrosoftEmails(user.accessToken, user.email)
       }
       
       const processedEmails = await processEmailsInBatches(emails)
