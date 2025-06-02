@@ -15,7 +15,8 @@ import {
   Activity, 
   Calendar,
   Clock,
-  Shield
+  Shield,
+  CheckCircle2
 } from 'lucide-react'
 
 // Cache duration in milliseconds (5 minutes)
@@ -138,6 +139,7 @@ export default async function AdminPage() {
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="emails">Emails</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
@@ -199,6 +201,76 @@ export default async function AdminPage() {
 
           <TabsContent value="emails">
             <EmailDashboard emails={allEmails} />
+          </TabsContent>
+
+          <TabsContent value="actions">
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">From</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Date</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Student Action</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Counsellor Action</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {allEmails
+                      .filter(email => email.isStudentAction || email.isCounsellorAction)
+                      .map((email) => (
+                        <tr key={email.id} className={`hover:bg-gray-50/50 ${
+                          email.isDone ? 'bg-green-50' : ''
+                        }`}>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <p className="font-medium text-gray-900">{email.subject}</p>
+                                <p className="text-sm text-gray-500">To: {email.userName}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-gray-900">{email.from}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <p className="text-gray-900">
+                                {new Date(email.date).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <Badge variant={email.isStudentAction ? 'default' : 'secondary'}>
+                              {email.isStudentAction ? 'Yes' : 'No'}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <Badge variant={email.isCounsellorAction ? 'default' : 'secondary'}>
+                              {email.isCounsellorAction ? 'Yes' : 'No'}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              {email.isDone ? (
+                                <Badge variant="success" className="bg-green-100 text-green-800">
+                                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                                  Done
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Pending</Badge>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

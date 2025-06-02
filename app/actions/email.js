@@ -72,9 +72,9 @@ async function storeEmailsInDb(emailDetails, userId) {
       .onConflictDoUpdate({
         target: [emails.userId, emails.from, emails.date],
         set: {
-          subject: email.subject,
-          content: email.content,
-          summary: email.summary,
+          subject: newEmails[0].subject,
+          content: newEmails[0].content,
+          summary: newEmails[0].summary,
           updatedAt: new Date()
         }
       })
