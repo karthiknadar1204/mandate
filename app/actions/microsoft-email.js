@@ -12,14 +12,15 @@ export async function fetchMicrosoftEmails(accessToken) {
 
     const response = await client
       .api('/me/messages')
-      .top(10)
-      .select('subject,from,receivedDateTime')
+      .top(15)
+      .select('subject,from,receivedDateTime,body')
       .get()
 
     const emailDetails = response.value.map(email => ({
       subject: email.subject || 'No Subject',
       from: email.from?.emailAddress?.address || 'Unknown',
-      date: new Date(email.receivedDateTime).toLocaleString()
+      date: new Date(email.receivedDateTime).toLocaleString(),
+      content: email.body?.content || 'No content available'
     }))
 
     return emailDetails

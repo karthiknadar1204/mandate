@@ -11,7 +11,7 @@ export async function fetchUserEmails(accessToken) {
     
     const response = await gmail.users.messages.list({
       userId: 'me',
-      maxResults: 10,
+      maxResults: 15,
       format: 'full'
     })
 
@@ -22,10 +22,25 @@ export async function fetchUserEmails(accessToken) {
           userId: 'me',
           id: message.id,
         })
+
+        // Get email content
+        let content = ''
+        if (email.data.payload.parts) {
+          // Handle multipart emails
+          const textPart = email.data.payload.parts.find(part => part.mimeType === 'text/plain')
+          if (textPart && textPart.body.data) {
+            content = Buffer.from(textPart.body.data, 'base64').toString('utf-8')
+          }
+        } else if (email.data.payload.body && email.data.payload.body.data) {
+          // Handle single part emails
+          content = Buffer.from(email.data.payload.body.data, 'base64').toString('utf-8')
+        }
+
         return {
           subject: email.data.payload.headers.find(h => h.name === 'Subject')?.value || 'No Subject',
           from: email.data.payload.headers.find(h => h.name === 'From')?.value || 'Unknown',
           date: email.data.payload.headers.find(h => h.name === 'Date')?.value || 'Unknown',
+          content: content
         }
       })
     )
