@@ -192,7 +192,7 @@ export function EmailDashboard({ emails: initialEmails }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center gap-2 text-sm">
                       <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-600">From: {email.from}</span>
+                      <span className="text-gray-600">From: {email.from.match(/<([^>]+)>/) ? email.from.match(/<([^>]+)>/)[1] : email.from}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="h-4 w-4 text-gray-400" />

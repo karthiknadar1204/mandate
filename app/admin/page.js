@@ -204,6 +204,54 @@ export default async function AdminPage() {
           </TabsContent>
 
           <TabsContent value="actions">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Email Attendance</CardTitle>
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Attended</p>
+                      <p className="text-2xl font-bold">
+                        {allEmails.filter(email => email.isStudentAction || email.isCounsellorAction).length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Unattended</p>
+                      <p className="text-2xl font-bold">
+                        {allEmails.filter(email => !email.isStudentAction && !email.isCounsellorAction).length}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Action Statistics</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Student Actions</p>
+                      <p className="text-2xl font-bold">
+                        {allEmails.filter(email => email.isStudentAction).length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Counsellor Actions</p>
+                      <p className="text-2xl font-bold">
+                        {allEmails.filter(email => email.isCounsellorAction).length}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <div className="overflow-x-auto">
                 <table className="w-full">
