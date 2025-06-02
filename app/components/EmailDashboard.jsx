@@ -8,14 +8,20 @@ import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronUp, Mail, User, Calendar, FileText, UserCircle, MessageSquare, FileText as FileTextIcon } from "lucide-react";
+import { db } from '@/configs/db';
+import { emails } from '@/configs/schema';
+import { eq } from 'drizzle-orm';
+import { updateEmailStatus } from '@/app/actions/email';
 
-export function EmailDashboard({ emails }) {
+export function EmailDashboard({ emails: initialEmails }) {
   const [expandedEmails, setExpandedEmails] = useState({});
-  const [emailStatuses, setEmailStatuses] = useState({});
+  const [emails, setEmails] = useState(initialEmails);
+  const [pendingChanges, setPendingChanges] = useState({});
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    console.log('Emails received:', emails);
-  }, [emails]);
+    setEmails(initialEmails);
+  }, [initialEmails]);
 
   const toggleEmail = (emailId) => {
     setExpandedEmails(prev => ({
@@ -25,13 +31,51 @@ export function EmailDashboard({ emails }) {
   };
 
   const handleStatusChange = (emailId, field, value) => {
-    setEmailStatuses(prev => ({
+    setPendingChanges(prev => ({
       ...prev,
       [emailId]: {
         ...prev[emailId],
         [field]: value
       }
     }));
+  };
+
+  const handleConfirmChanges = async (emailId) => {
+    try {
+      setIsUpdating(true);
+      console.log("Confirming changes for email:", emailId);
+      
+      const changes = pendingChanges[emailId];
+      if (!changes) return;
+
+      const result = await updateEmailStatus(emailId, changes);
+      
+      if (result.success) {
+        // Update local state with the returned email data
+        setEmails(prev => prev.map(email => 
+          email.id === emailId 
+            ? { ...email, ...result.email }
+            : email
+        ));
+
+        // Clear pending changes for this email
+        setPendingChanges(prev => {
+          const newPending = { ...prev };
+          delete newPending[emailId];
+          return newPending;
+        });
+      } else {
+        console.error('Failed to update email:', result.error);
+      }
+    } catch (error) {
+      console.error('Error updating email status:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const hasPendingChanges = (emailId) => {
+    return pendingChanges[emailId] && Object.keys(pendingChanges[emailId]).length > 0;
   };
 
   const formatEmailContent = (content) => {
@@ -70,8 +114,8 @@ export function EmailDashboard({ emails }) {
       <h1 className="text-3xl font-bold mb-8">Email Dashboard</h1>
       
       <div className="space-y-4">
-        {emails.map((email, index) => (
-          <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+        {emails.map((email) => (
+          <Card key={email.id} className="hover:shadow-lg transition-shadow duration-200">
             <CardContent className="p-6">
               <div className="flex items-start gap-6">
                 {/* Avatar and Basic Info */}
@@ -114,22 +158,35 @@ export function EmailDashboard({ emails }) {
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <FileText className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-600">Status: Active</span>
+                      <span className="text-gray-600">Status: {email.status}</span>
                     </div>
                   </div>
 
                   {/* Actions Section */}
                   <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Actions</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-gray-700">Actions</h4>
+                      {hasPendingChanges(email.id) && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleConfirmChanges(email.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? 'Updating...' : 'Confirm Changes'}
+                        </Button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center space-x-2">
                         <Checkbox 
-                          id={`not-important-${index}`}
-                          checked={emailStatuses[index]?.notImportant || false}
-                          onCheckedChange={(checked) => handleStatusChange(index, 'notImportant', checked)}
+                          id={`not-important-${email.id}`}
+                          checked={pendingChanges[email.id]?.isNotImportant ?? email.isNotImportant}
+                          onCheckedChange={(checked) => handleStatusChange(email.id, 'isNotImportant', checked)}
+                          disabled={isUpdating}
                         />
                         <label
-                          htmlFor={`not-important-${index}`}
+                          htmlFor={`not-important-${email.id}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
                           Not Important
@@ -139,12 +196,13 @@ export function EmailDashboard({ emails }) {
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
                           <Checkbox 
-                            id={`student-${index}`}
-                            checked={emailStatuses[index]?.student || false}
-                            onCheckedChange={(checked) => handleStatusChange(index, 'student', checked)}
+                            id={`student-${email.id}`}
+                            checked={pendingChanges[email.id]?.isStudentAction ?? email.isStudentAction}
+                            onCheckedChange={(checked) => handleStatusChange(email.id, 'isStudentAction', checked)}
+                            disabled={isUpdating}
                           />
                           <label
-                            htmlFor={`student-${index}`}
+                            htmlFor={`student-${email.id}`}
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             Student
@@ -152,12 +210,13 @@ export function EmailDashboard({ emails }) {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox 
-                            id={`counsellor-${index}`}
-                            checked={emailStatuses[index]?.counsellor || false}
-                            onCheckedChange={(checked) => handleStatusChange(index, 'counsellor', checked)}
+                            id={`counsellor-${email.id}`}
+                            checked={pendingChanges[email.id]?.isCounsellorAction ?? email.isCounsellorAction}
+                            onCheckedChange={(checked) => handleStatusChange(email.id, 'isCounsellorAction', checked)}
+                            disabled={isUpdating}
                           />
                           <label
-                            htmlFor={`counsellor-${index}`}
+                            htmlFor={`counsellor-${email.id}`}
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             Counsellor
@@ -180,13 +239,13 @@ export function EmailDashboard({ emails }) {
                   <Button 
                     variant="ghost" 
                     className="w-full flex items-center justify-between text-sm text-gray-600 hover:text-gray-900 mb-4"
-                    onClick={() => toggleEmail(index)}
+                    onClick={() => toggleEmail(email.id)}
                   >
-                    {expandedEmails[index] ? 'Hide Full Content' : 'Show Full Content'}
-                    {expandedEmails[index] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {expandedEmails[email.id] ? 'Hide Full Content' : 'Show Full Content'}
+                    {expandedEmails[email.id] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
                   
-                  {expandedEmails[index] && (
+                  {expandedEmails[email.id] && (
                     <div className="bg-white rounded-lg border border-gray-200">
                       <div className="p-4 border-b border-gray-200">
                         <div className="flex items-center gap-2">

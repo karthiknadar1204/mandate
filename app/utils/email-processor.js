@@ -1,9 +1,31 @@
 import { client } from '@/configs/Ai';
+import { db } from '@/configs/db';
+import { emails } from '@/configs/schema';
+import { eq, and } from 'drizzle-orm';
 
 const MAX_TOKENS_PER_REQUEST = 4000; // Adjust based on your LLM's context limit
+const BATCH_SIZE = 5;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export async function processEmailThroughLLM(email) {
   try {
+    // Check if we have a recent summary in the database
+    const existingEmail = await db.query.emails.findFirst({
+      where: (emails) => and(
+        eq(emails.userId, email.userId),
+        eq(emails.from, email.from),
+        eq(emails.date, new Date(email.date))
+      )
+    });
+
+    if (existingEmail?.summary && 
+        new Date(existingEmail.updatedAt) > new Date(Date.now() - CACHE_DURATION)) {
+      return {
+        ...email,
+        summary: existingEmail.summary
+      };
+    }
+
     // Prepare the email content for the LLM
     const emailContent = `
       Subject: ${email.subject}
@@ -33,6 +55,17 @@ export async function processEmailThroughLLM(email) {
 
     const summary = completion.choices[0]?.message?.content || 'No summary available';
 
+    // Update the email in the database with the new summary
+    if (existingEmail) {
+      await db
+        .update(emails)
+        .set({
+          summary: summary.trim(),
+          updatedAt: new Date()
+        })
+        .where(eq(emails.id, existingEmail.id));
+    }
+
     return {
       ...email,
       summary: summary.trim()
@@ -46,16 +79,44 @@ export async function processEmailThroughLLM(email) {
   }
 }
 
-export async function processEmailsInBatches(emails, batchSize = 5) {
+export async function processEmailsInBatches(emails, batchSize = BATCH_SIZE) {
   if (!emails || !Array.isArray(emails) || emails.length === 0) {
     return [];
   }
 
-  const processedEmails = [];
+  // Filter out emails that already have recent summaries
+  const emailsToProcess = await Promise.all(
+    emails.map(async (email) => {
+      try {
+        const existingEmail = await db.query.emails.findFirst({
+          where: (emails) => and(
+            eq(emails.userId, email.userId),
+            eq(emails.from, email.from),
+            eq(emails.date, new Date(email.date))
+          )
+        });
+
+        if (existingEmail?.summary && 
+            new Date(existingEmail.updatedAt) > new Date(Date.now() - CACHE_DURATION)) {
+          return {
+            ...email,
+            summary: existingEmail.summary
+          };
+        }
+        return email;
+      } catch (error) {
+        console.error('Error checking existing email:', error);
+        return email;
+      }
+    })
+  );
+
+  const emailsNeedingProcessing = emailsToProcess.filter(email => !email.summary);
+  const processedEmails = [...emailsToProcess.filter(email => email.summary)];
   
-  // Process emails in batches to avoid overwhelming the LLM
-  for (let i = 0; i < emails.length; i += batchSize) {
-    const batch = emails.slice(i, i + batchSize);
+  // Process remaining emails in batches
+  for (let i = 0; i < emailsNeedingProcessing.length; i += batchSize) {
+    const batch = emailsNeedingProcessing.slice(i, i + batchSize);
     try {
       const batchPromises = batch.map(email => processEmailThroughLLM(email));
       const processedBatch = await Promise.all(batchPromises);

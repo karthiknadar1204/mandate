@@ -2,7 +2,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client'
 import { db } from '@/configs/db'
-import { usersTable } from '@/configs/schema'
+import { usersTable, emails } from '@/configs/schema'
 import { eq } from 'drizzle-orm'
 
 async function refreshMicrosoftToken(refreshToken) {
@@ -32,6 +32,51 @@ async function refreshMicrosoftToken(refreshToken) {
   }
 }
 
+async function storeEmailsInDb(emailDetails, userId) {
+  try {
+    // Store each email in the database
+    const storedEmails = await Promise.all(
+      emailDetails.map(async (email) => {
+        const [storedEmail] = await db
+          .insert(emails)
+          .values({
+            userId: userId,
+            subject: email.subject,
+            from: email.from,
+            userEmail: email.userEmail,
+            userName: email.userName,
+            content: email.content,
+            summary: email.summary,
+            date: new Date(email.date),
+            isNotImportant: false,
+            isStudentAction: false,
+            isCounsellorAction: false,
+            status: 'active',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .onConflictDoUpdate({
+            target: [emails.userId, emails.from, emails.date],
+            set: {
+              subject: email.subject,
+              content: email.content,
+              summary: email.summary,
+              updatedAt: new Date()
+            }
+          })
+          .returning()
+
+        return storedEmail
+      })
+    )
+
+    return storedEmails
+  } catch (error) {
+    console.error('Error storing emails in database:', error)
+    throw error
+  }
+}
+
 export async function fetchMicrosoftEmails(accessToken, userEmail) {
   try {
     const client = Client.init({
@@ -41,6 +86,15 @@ export async function fetchMicrosoftEmails(accessToken, userEmail) {
     })
 
     try {
+      // Get user from database
+      const user = await db.query.usersTable.findFirst({
+        where: eq(usersTable.email, userEmail)
+      })
+
+      if (!user) {
+        throw new Error('User not found')
+      }
+
       const response = await client
         .api('/me/messages')
         .top(15)
@@ -51,10 +105,15 @@ export async function fetchMicrosoftEmails(accessToken, userEmail) {
         subject: email.subject || 'No Subject',
         from: email.from?.emailAddress?.address || 'Unknown',
         date: new Date(email.receivedDateTime).toLocaleString(),
-        content: email.body?.content || 'No content available'
+        content: email.body?.content || 'No content available',
+        userEmail: userEmail,
+        userName: user.name
       }))
 
-      return emailDetails
+      // Store emails in database
+      const storedEmails = await storeEmailsInDb(emailDetails, user.id)
+
+      return storedEmails
     } catch (error) {
       if (error.statusCode === 401) {
         // Token expired, try to refresh

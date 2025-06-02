@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp, boolean, varchar } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, timestamp, boolean, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const usersTable = pgTable('users_table', {
   id: serial('id').primaryKey(),
@@ -28,4 +28,8 @@ export const emails = pgTable('emails', {
   status: varchar('status', { length: 50 }).default('active'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => {
+  return {
+    emailUniqueIdx: uniqueIndex('email_unique_idx').on(table.userId, table.from, table.date),
+  };
 });

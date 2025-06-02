@@ -18,6 +18,9 @@ import {
   Shield
 } from 'lucide-react'
 
+// Cache duration in milliseconds (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000
+
 export default async function AdminPage() {
   const session = await auth()
 
@@ -25,21 +28,36 @@ export default async function AdminPage() {
     redirect('/')
   }
 
+  // Get users with their latest emails
   const users = await db.query.usersTable.findMany({
     orderBy: (users, { desc }) => [desc(users.createdAt)]
   })
 
+  // Process all users' emails in parallel
   const usersWithEmails = await Promise.all(
     users.map(async (user) => {
-      let emails = []
-      if (user.provider === 'google') {
-        emails = await fetchUserEmails(user.accessToken, user.email)
-      } else if (user.provider === 'microsoft-entra-id') {
-        emails = await fetchMicrosoftEmails(user.accessToken, user.email)
+      try {
+        let emails = []
+        if (user.provider === 'google') {
+          emails = await fetchUserEmails(user.accessToken, user.email)
+        } else if (user.provider === 'microsoft-entra-id') {
+          emails = await fetchMicrosoftEmails(user.accessToken, user.email)
+        }
+        
+        // Only process emails that don't have summaries
+        const emailsToProcess = emails.filter(email => !email.summary)
+        if (emailsToProcess.length > 0) {
+          const processedEmails = await processEmailsInBatches(emailsToProcess)
+          // Merge processed emails with existing ones
+          const existingEmails = emails.filter(email => email.summary)
+          return { ...user, emails: [...existingEmails, ...processedEmails] }
+        }
+        
+        return { ...user, emails }
+      } catch (error) {
+        console.error(`Error processing emails for user ${user.email}:`, error)
+        return { ...user, emails: [] }
       }
-      
-      const processedEmails = await processEmailsInBatches(emails)
-      return { ...user, emails: processedEmails }
     })
   )
 
@@ -49,7 +67,7 @@ export default async function AdminPage() {
       userName: user.name,
       userEmail: user.email
     }))
-  )
+  ).sort((a, b) => new Date(b.date) - new Date(a.date))
 
   const totalEmails = allEmails.length
   const totalUsers = users.length
@@ -57,72 +75,62 @@ export default async function AdminPage() {
   const microsoftUsers = users.filter(u => u.provider === 'microsoft-entra-id').length
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div className="container mx-auto p-6">
+      <div className="space-y-6">
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl font-bold">Admin Dashboard</CardTitle>
-              <CardDescription>Monitor and manage your application</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalUsers}</div>
+              <p className="text-xs text-muted-foreground">
+                {googleUsers} Google, {microsoftUsers} Microsoft
+              </p>
+            </CardContent>
           </Card>
-          
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-end">
-                <Badge variant="outline" className="px-3 py-1">
-                  <Shield className="w-4 h-4 mr-2" />
-                  Admin Access
-                </Badge>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Users</p>
-                <p className="text-2xl font-semibold">{totalUsers}</p>
-              </div>
-            </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Emails</CardTitle>
+              <Mail className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalEmails}</div>
+              <p className="text-xs text-muted-foreground">
+                Processed and stored
+              </p>
+            </CardContent>
           </Card>
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <Mail className="w-6 h-6 text-green-600" />
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {users.filter(u => new Date(u.updatedAt) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length}
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Emails</p>
-                <p className="text-2xl font-semibold">{totalEmails}</p>
-              </div>
-            </div>
+              <p className="text-xs text-muted-foreground">
+                Last 24 hours
+              </p>
+            </CardContent>
           </Card>
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <Activity className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Google Users</p>
-                <p className="text-2xl font-semibold">{googleUsers}</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-50 rounded-lg">
-                <Calendar className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Microsoft Users</p>
-                <p className="text-2xl font-semibold">{microsoftUsers}</p>
-              </div>
-            </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">System Status</CardTitle>
+              <Shield className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Healthy</div>
+              <p className="text-xs text-muted-foreground">
+                All systems operational
+              </p>
+            </CardContent>
           </Card>
         </div>
 
