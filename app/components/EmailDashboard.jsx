@@ -31,13 +31,34 @@ export function EmailDashboard({ emails: initialEmails }) {
   };
 
   const handleStatusChange = (emailId, field, value) => {
-    setPendingChanges(prev => ({
-      ...prev,
-      [emailId]: {
-        ...prev[emailId],
-        [field]: value
+    setPendingChanges(prev => {
+      const currentChanges = prev[emailId] || {};
+      const email = emails.find(e => e.id === emailId);
+      
+      // If marking as done, preserve the action values
+      if (field === 'isDone') {
+        return {
+          ...prev,
+          [emailId]: {
+            ...currentChanges,
+            isDone: value,
+            // Keep existing action values or use current email values
+            isStudentAction: currentChanges.isStudentAction ?? email.isStudentAction,
+            isCounsellorAction: currentChanges.isCounsellorAction ?? email.isCounsellorAction,
+            isNotImportant: currentChanges.isNotImportant ?? email.isNotImportant
+          }
+        };
       }
-    }));
+      
+      // For other fields, update normally
+      return {
+        ...prev,
+        [emailId]: {
+          ...currentChanges,
+          [field]: value
+        }
+      };
+    });
   };
 
   const handleConfirmChanges = async (emailId) => {
@@ -109,18 +130,34 @@ export function EmailDashboard({ emails: initialEmails }) {
     ));
   };
 
+  const showDoneCheckbox = (email) => {
+    return (email.isStudentAction || email.isCounsellorAction) && 
+           !email.isDone;
+  };
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-8">Email Dashboard</h1>
       
       <div className="space-y-4">
         {emails.map((email) => (
-          <Card key={email.id} className="hover:shadow-lg transition-shadow duration-200">
+          <Card 
+            key={email.id} 
+            className={`hover:shadow-lg transition-shadow duration-200 ${
+              (pendingChanges[email.id]?.isDone ?? email.isDone) 
+                ? 'bg-green-50 border-green-200' 
+                : ''
+            }`}
+          >
             <CardContent className="p-6">
               <div className="flex items-start gap-6">
                 {/* Avatar and Basic Info */}
                 <div className="flex-shrink-0">
-                  <Avatar className="h-14 w-14">
+                  <Avatar className={`h-14 w-14 ${
+                    (pendingChanges[email.id]?.isDone ?? email.isDone) 
+                      ? 'ring-2 ring-green-500' 
+                      : ''
+                  }`}>
                     <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(email.from)}`} />
                     <AvatarFallback>{email.from.charAt(0)}</AvatarFallback>
                   </Avatar>
@@ -131,7 +168,16 @@ export function EmailDashboard({ emails: initialEmails }) {
                   {/* Subject and Receiver Section */}
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xl font-semibold text-gray-900">{email.subject}</h3>
+                      <h3 className={`text-xl font-semibold ${
+                        (pendingChanges[email.id]?.isDone ?? email.isDone) 
+                          ? 'text-green-800' 
+                          : 'text-gray-900'
+                      }`}>
+                        {email.subject}
+                        {(pendingChanges[email.id]?.isDone ?? email.isDone) && (
+                          <span className="ml-2 text-sm font-medium text-green-600">✓ Done</span>
+                        )}
+                      </h3>
                       <span className="text-sm text-gray-500">
                         {format(new Date(email.date), 'PPP p')}
                       </span>
@@ -224,6 +270,26 @@ export function EmailDashboard({ emails: initialEmails }) {
                         </div>
                       </div>
                     </div>
+
+                    {/* Done Checkbox Section */}
+                    {showDoneCheckbox(email) && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`done-${email.id}`}
+                            checked={pendingChanges[email.id]?.isDone ?? email.isDone}
+                            onCheckedChange={(checked) => handleStatusChange(email.id, 'isDone', checked)}
+                            disabled={isUpdating}
+                          />
+                          <label
+                            htmlFor={`done-${email.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Mark as Done
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Summary Section */}
