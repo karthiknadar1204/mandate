@@ -6,10 +6,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronUp, Mail, User, Calendar, FileText, UserCircle, MessageSquare, FileText as FileTextIcon } from "lucide-react";
 
 export function EmailDashboard({ emails }) {
   const [expandedEmails, setExpandedEmails] = useState({});
+  const [emailStatuses, setEmailStatuses] = useState({});
 
   useEffect(() => {
     console.log('Emails received:', emails);
@@ -19,6 +21,16 @@ export function EmailDashboard({ emails }) {
     setExpandedEmails(prev => ({
       ...prev,
       [emailId]: !prev[emailId]
+    }));
+  };
+
+  const handleStatusChange = (emailId, field, value) => {
+    setEmailStatuses(prev => ({
+      ...prev,
+      [emailId]: {
+        ...prev[emailId],
+        [field]: value
+      }
     }));
   };
 
@@ -103,6 +115,55 @@ export function EmailDashboard({ emails }) {
                     <div className="flex items-center gap-2 text-sm">
                       <FileText className="h-4 w-4 text-gray-400" />
                       <span className="text-gray-600">Status: Active</span>
+                    </div>
+                  </div>
+
+                  {/* Actions Section */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Actions</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`not-important-${index}`}
+                          checked={emailStatuses[index]?.notImportant || false}
+                          onCheckedChange={(checked) => handleStatusChange(index, 'notImportant', checked)}
+                        />
+                        <label
+                          htmlFor={`not-important-${index}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Not Important
+                        </label>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`student-${index}`}
+                            checked={emailStatuses[index]?.student || false}
+                            onCheckedChange={(checked) => handleStatusChange(index, 'student', checked)}
+                          />
+                          <label
+                            htmlFor={`student-${index}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Student
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`counsellor-${index}`}
+                            checked={emailStatuses[index]?.counsellor || false}
+                            onCheckedChange={(checked) => handleStatusChange(index, 'counsellor', checked)}
+                          />
+                          <label
+                            htmlFor={`counsellor-${index}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Counsellor
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
