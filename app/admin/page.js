@@ -149,45 +149,43 @@ export default async function AdminPage() {
                   <thead>
                     <tr className="border-b">
                       <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">User</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Provider</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Created</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Last Updated</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">User Email</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Sender Email</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Subject</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Summary</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {usersWithEmails.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50/50">
+                    {allEmails.map((email) => (
+                      <tr key={email.id} className="hover:bg-gray-50/50">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <img className="h-10 w-10 rounded-full" src={user.image} alt="" />
+                            {email.userImage && (
+                              <img className="h-10 w-10 rounded-full" src={email.userImage} alt="" />
+                            )}
                             <div>
-                              <p className="font-medium text-gray-900">{user.name}</p>
-                              <p className="text-sm text-gray-500">ID: {user.id}</p>
+                              <p className="font-medium text-gray-900">{email.userName}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <p className="text-gray-900">{user.email}</p>
+                          <p className="text-gray-900">{email.userEmail}</p>
                         </td>
                         <td className="px-6 py-4">
-                          <Badge variant={user.provider === 'google' ? 'default' : 'secondary'}>
-                            {user.provider}
-                          </Badge>
+                          <p className="text-gray-900">{email.from}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-gray-900">{email.subject}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-gray-900">{email.summary || 'No summary'}</p>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-gray-400" />
                             <p className="text-gray-900">
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <p className="text-gray-900">
-                              {new Date(user.updatedAt).toLocaleDateString()}
+                              {new Date(email.date).toLocaleDateString()}
                             </p>
                           </div>
                         </td>
