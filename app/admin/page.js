@@ -18,6 +18,7 @@ import {
   Shield,
   CheckCircle2
 } from 'lucide-react'
+import { UserTableRow } from '@/app/components/UserTableRow'
 
 // Cache duration in milliseconds (5 minutes)
 const CACHE_DURATION = 5 * 60 * 1000
@@ -154,42 +155,12 @@ export default async function AdminPage() {
                       <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Subject</th>
                       <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Summary</th>
                       <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Date</th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {allEmails.map((email) => (
-                      <tr key={email.id} className="hover:bg-gray-50/50">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            {email.userImage && (
-                              <img className="h-10 w-10 rounded-full" src={email.userImage} alt="" />
-                            )}
-                            <div>
-                              <p className="font-medium text-gray-900">{email.userName}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-gray-900">{email.userEmail}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-gray-900">{email.from}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-gray-900">{email.subject}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-gray-900">{email.summary || 'No summary'}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <p className="text-gray-900">
-                              {new Date(email.date).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
+                      <UserTableRow key={email.id} email={email} />
                     ))}
                   </tbody>
                 </table>

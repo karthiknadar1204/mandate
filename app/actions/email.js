@@ -28,66 +28,114 @@ async function refreshGoogleToken(refreshToken) {
 }
 
 async function storeEmailsInDb(emailDetails, userId) {
-  try {
-    // Get the latest email date for this user
-    const latestEmail = await db.query.emails.findFirst({
-      where: eq(emails.userId, userId),
-      orderBy: (emails, { desc }) => [desc(emails.date)]
-    })
+  const maxRetries = 3;
+  let retryCount = 0;
 
-    // Filter out emails that are already in the database
-    const newEmails = emailDetails.filter(email => 
-      !latestEmail || new Date(email.date) > new Date(latestEmail.date)
-    )
+  while (retryCount < maxRetries) {
+    try {
+      // Get the latest email date for this user
+      const latestEmail = await db.query.emails.findFirst({
+        where: eq(emails.userId, userId),
+        orderBy: (emails, { desc }) => [desc(emails.date)]
+      });
 
-    if (newEmails.length === 0) {
-      // If no new emails, return all existing emails for this user
+      // Filter out emails that are already in the database
+      const newEmails = emailDetails.filter(email => 
+        !latestEmail || new Date(email.date) > new Date(latestEmail.date)
+      );
+
+      if (newEmails.length === 0) {
+        // If no new emails, return all existing emails for this user
+        return await db.query.emails.findMany({
+          where: eq(emails.userId, userId),
+          orderBy: (emails, { desc }) => [desc(emails.date)]
+        });
+      }
+
+      // Get existing emails to preserve their states
+      const existingEmails = await db.query.emails.findMany({
+        where: eq(emails.userId, userId)
+      });
+
+      // Create a map of existing email states
+      const existingStates = new Map(
+        existingEmails.map(email => [
+          `${email.from}-${email.date.toISOString()}`,
+          {
+            isNotImportant: email.isNotImportant,
+            isStudentAction: email.isStudentAction,
+            isCounsellorAction: email.isCounsellorAction
+          }
+        ])
+      );
+
+      // Batch insert new emails
+      const [storedEmails] = await db
+        .insert(emails)
+        .values(
+          newEmails.map(email => {
+            const key = `${email.from}-${new Date(email.date).toISOString()}`;
+            const existingState = existingStates.get(key) || {
+              isNotImportant: false,
+              isStudentAction: false,
+              isCounsellorAction: false
+            };
+
+            return {
+              userId: userId,
+              subject: email.subject,
+              from: email.from,
+              userEmail: email.userEmail,
+              userName: email.userName,
+              content: email.content,
+              summary: email.summary,
+              date: new Date(email.date),
+              isNotImportant: existingState.isNotImportant,
+              isStudentAction: existingState.isStudentAction,
+              isCounsellorAction: existingState.isCounsellorAction,
+              status: 'active',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+          })
+        )
+        .onConflictDoUpdate({
+          target: [emails.userId, emails.from, emails.date],
+          set: {
+            subject: newEmails[0].subject,
+            content: newEmails[0].content,
+            summary: newEmails[0].summary,
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+
+      // Return all emails for this user after storing new ones
       return await db.query.emails.findMany({
         where: eq(emails.userId, userId),
         orderBy: (emails, { desc }) => [desc(emails.date)]
       });
-    }
-
-    // Batch insert new emails
-    const [storedEmails] = await db
-      .insert(emails)
-      .values(
-        newEmails.map(email => ({
-          userId: userId,
-          subject: email.subject,
-          from: email.from,
-          userEmail: email.userEmail,
-          userName: email.userName,
-          content: email.content,
-          summary: email.summary,
-          date: new Date(email.date),
-          isNotImportant: false,
-          isStudentAction: false,
-          isCounsellorAction: false,
-          status: 'active',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }))
-      )
-      .onConflictDoUpdate({
-        target: [emails.userId, emails.from, emails.date],
-        set: {
-          subject: newEmails[0].subject,
-          content: newEmails[0].content,
-          summary: newEmails[0].summary,
-          updatedAt: new Date()
+    } catch (error) {
+      retryCount++;
+      console.error(`Database error (attempt ${retryCount}/${maxRetries}):`, error);
+      
+      if (retryCount === maxRetries) {
+        console.error('Max retries reached, returning existing emails');
+        // On final retry, try to return existing emails
+        try {
+          return await db.query.emails.findMany({
+            where: eq(emails.userId, userId),
+            orderBy: (emails, { desc }) => [desc(emails.date)]
+          });
+        } catch (finalError) {
+          console.error('Failed to fetch existing emails:', finalError);
+          throw new Error('Failed to access database after multiple retries');
         }
-      })
-      .returning()
-
-    // Return all emails for this user after storing new ones
-    return await db.query.emails.findMany({
-      where: eq(emails.userId, userId),
-      orderBy: (emails, { desc }) => [desc(emails.date)]
-    });
-  } catch (error) {
-    console.error('Error storing emails in database:', error)
-    throw error
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+    }
   }
 }
 
@@ -189,27 +237,20 @@ export async function fetchUserEmails(accessToken, userEmail) {
   }
 }
 
-export async function updateEmailStatus(emailId, changes) {
-  'use server'
-  
+export async function updateEmailStatus(emailId, updates) {
   try {
-    const updateData = {
-      isNotImportant: changes.isNotImportant ?? false,
-      isStudentAction: changes.isStudentAction ?? false,
-      isCounsellorAction: changes.isCounsellorAction ?? false,
-      isDone: changes.isDone ?? false,
-      updatedAt: new Date()
-    };
-
     const [updatedEmail] = await db
       .update(emails)
-      .set(updateData)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
       .where(eq(emails.id, emailId))
-      .returning();
+      .returning()
 
-    return { success: true, email: updatedEmail };
+    return { success: true, email: updatedEmail }
   } catch (error) {
-    console.error('Error updating email status:', error);
-    return { success: false, error: error.message };
+    console.error('Error updating email status:', error)
+    return { success: false, error: 'Failed to update email status' }
   }
 } 
