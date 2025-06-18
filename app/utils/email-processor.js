@@ -38,7 +38,7 @@ export async function processEmailThroughLLM(email) {
     const truncatedContent = emailContent.slice(0, MAX_TOKENS_PER_REQUEST);
 
     const completion = await client.chat.completions.create({
-      model: "grok-3",
+      model: "gpt-4o",
       messages: [
         { 
           role: "system", 
