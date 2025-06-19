@@ -6,6 +6,8 @@ import { fetchUserEmails } from '@/app/actions/email'
 import { fetchMicrosoftEmails } from '@/app/actions/microsoft-email'
 import { processEmailsInBatches } from '@/app/utils/email-processor'
 import { EmailDashboard } from '@/app/components/EmailDashboard'
+import { UserTable } from '@/app/components/UserTable'
+import { ActionsTable } from '@/app/components/ActionsTable'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -16,9 +18,10 @@ import {
   Calendar,
   Clock,
   Shield,
-  CheckCircle2
+  CheckCircle2,
+  TrendingUp,
+  BarChart3
 } from 'lucide-react'
-import { UserTableRow } from '@/app/components/UserTableRow'
 
 // Cache duration in milliseconds (5 minutes)
 const CACHE_DURATION = 5 * 60 * 1000
@@ -67,7 +70,8 @@ export default async function AdminPage() {
     user.emails.map(email => ({
       ...email,
       userName: user.name,
-      userEmail: user.email
+      userEmail: user.email,
+      userImage: user.image
     }))
   ).sort((a, b) => new Date(b.date) - new Date(a.date))
 
@@ -75,61 +79,81 @@ export default async function AdminPage() {
   const totalUsers = users.length
   const googleUsers = users.filter(u => u.provider === 'google').length
   const microsoftUsers = users.filter(u => u.provider === 'microsoft-entra-id').length
+  const activeUsers = users.filter(u => new Date(u.updatedAt) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length
+  const attendedEmails = allEmails.filter(email => email.isStudentAction || email.isCounsellorAction).length
+  const unattendedEmails = allEmails.filter(email => !email.isStudentAction && !email.isCounsellorAction).length
+  const studentActions = allEmails.filter(email => email.isStudentAction).length
+  const counsellorActions = allEmails.filter(email => email.isCounsellorAction).length
+
+  // Filter emails for actions table
+  const actionEmails = allEmails.filter(email => email.isStudentAction || email.isCounsellorAction)
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto p-6 space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-gray-600 mt-1">Manage users, emails, and system actions</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-sm">
+              <Shield className="w-4 h-4 mr-1" />
+              Admin Access
+            </Badge>
+          </div>
+        </div>
+
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-white shadow-sm border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
+              <Users className="h-5 w-5 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalUsers}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-gray-900">{totalUsers}</div>
+              <p className="text-xs text-gray-500 mt-1">
                 {googleUsers} Google, {microsoftUsers} Microsoft
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white shadow-sm border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Emails</CardTitle>
-              <Mail className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-600">Total Emails</CardTitle>
+              <Mail className="h-5 w-5 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalEmails}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-gray-900">{totalEmails}</div>
+              <p className="text-xs text-gray-500 mt-1">
                 Processed and stored
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white shadow-sm border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-600">Active Users</CardTitle>
+              <Activity className="h-5 w-5 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter(u => new Date(u.updatedAt) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length}
-              </div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-gray-900">{activeUsers}</div>
+              <p className="text-xs text-gray-500 mt-1">
                 Last 24 hours
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white shadow-sm border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">System Status</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-600">System Status</CardTitle>
+              <Shield className="h-5 w-5 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Healthy</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-gray-900">Healthy</div>
+              <p className="text-xs text-gray-500 mt-1">
                 All systems operational
               </p>
             </CardContent>
@@ -137,157 +161,73 @@ export default async function AdminPage() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="emails">Emails</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-white shadow-sm">
+            <TabsTrigger value="users" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <Users className="w-4 h-4 mr-2" />
+              Users & Emails
+            </TabsTrigger>
+            <TabsTrigger value="emails" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <Mail className="w-4 h-4 mr-2" />
+              Email Analytics
+            </TabsTrigger>
+            <TabsTrigger value="actions" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <Activity className="w-4 h-4 mr-2" />
+              Actions
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users">
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">User</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">User Email</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Sender Email</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Subject</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Summary</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email Date</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {allEmails.map((email) => (
-                      <UserTableRow key={email.id} email={email} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+          <TabsContent value="users" className="space-y-6">
+            <UserTable emails={allEmails} />
           </TabsContent>
 
-          <TabsContent value="emails">
+          <TabsContent value="emails" className="space-y-6">
             <EmailDashboard emails={allEmails} />
           </TabsContent>
 
-          <TabsContent value="actions">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <Card>
+          <TabsContent value="actions" className="space-y-6">
+            {/* Action Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-white shadow-sm border-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Email Attendance</CardTitle>
-                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-gray-600">Email Attendance</CardTitle>
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Attended</p>
-                      <p className="text-2xl font-bold">
-                        {allEmails.filter(email => email.isStudentAction || email.isCounsellorAction).length}
-                      </p>
+                      <p className="text-sm text-gray-500">Attended</p>
+                      <p className="text-2xl font-bold text-green-600">{attendedEmails}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Unattended</p>
-                      <p className="text-2xl font-bold">
-                        {allEmails.filter(email => !email.isStudentAction && !email.isCounsellorAction).length}
-                      </p>
+                      <p className="text-sm text-gray-500">Unattended</p>
+                      <p className="text-2xl font-bold text-orange-600">{unattendedEmails}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-white shadow-sm border-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Action Statistics</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-gray-600">Action Statistics</CardTitle>
+                  <TrendingUp className="h-5 w-5 text-purple-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Student Actions</p>
-                      <p className="text-2xl font-bold">
-                        {allEmails.filter(email => email.isStudentAction).length}
-                      </p>
+                      <p className="text-sm text-gray-500">Student Actions</p>
+                      <p className="text-2xl font-bold text-blue-600">{studentActions}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Counsellor Actions</p>
-                      <p className="text-2xl font-bold">
-                        {allEmails.filter(email => email.isCounsellorAction).length}
-                      </p>
+                      <p className="text-sm text-gray-500">Counsellor Actions</p>
+                      <p className="text-2xl font-bold text-purple-600">{counsellorActions}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Email</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">From</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Date</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Student Action</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Counsellor Action</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {allEmails
-                      .filter(email => email.isStudentAction || email.isCounsellorAction)
-                      .map((email) => (
-                        <tr key={email.id} className={`hover:bg-gray-50/50 ${
-                          email.isDone ? 'bg-green-50' : ''
-                        }`}>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <p className="font-medium text-gray-900">{email.subject}</p>
-                                <p className="text-sm text-gray-500">To: {email.userName}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-gray-900">{email.from}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              <p className="text-gray-900">
-                                {new Date(email.date).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <Badge variant={email.isStudentAction ? 'default' : 'secondary'}>
-                              {email.isStudentAction ? 'Yes' : 'No'}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <Badge variant={email.isCounsellorAction ? 'default' : 'secondary'}>
-                              {email.isCounsellorAction ? 'Yes' : 'No'}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              {email.isDone ? (
-                                <Badge variant="success" className="bg-green-100 text-green-800">
-                                  <CheckCircle2 className="w-4 h-4 mr-1" />
-                                  Done
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">Pending</Badge>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+            {/* Actions Table */}
+            <ActionsTable emails={actionEmails} />
           </TabsContent>
         </Tabs>
       </div>
