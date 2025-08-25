@@ -61,14 +61,14 @@ const Page = async () => {
                                 <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center overflow-hidden">
                                     <Image 
                                         src="/applogo.png" 
-                                        alt="eItaly CRM Logo" 
+                                        alt="Yesitaly CRM Logo" 
                                         width={40} 
                                         height={40}
                                         className="object-contain"
                                     />
                                 </div>
                                 <div>
-                                    <h1 className="text-xl font-bold text-gray-900">eItaly</h1>
+                                    <h1 className="text-xl font-bold text-gray-900">YesItaly</h1>
                                     <p className="text-xs text-gray-500">Student CRM</p>
                                 </div>
                             </div>
@@ -97,7 +97,7 @@ const Page = async () => {
                             Welcome back, {session.user.name}!
                         </h2>
                         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                            Your eItaly CRM dashboard is ready. Track student applications, manage email communications, and streamline your admissions process.
+                            Your Yesitaly CRM dashboard is ready. Track student applications, manage email communications, and streamline your admissions process.
                         </p>
                     </div>
 
@@ -183,14 +183,14 @@ const Page = async () => {
                             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center overflow-hidden">
                                 <Image 
                                     src="/applogo.png" 
-                                    alt="eItaly CRM Logo" 
+                                    alt="YesItaly CRM Logo" 
                                     width={40} 
                                     height={40}
                                     className="object-contain"
                                 />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900">eItaly</h1>
+                                <h1 className="text-xl font-bold text-gray-900">YesItaly</h1>
                                 <p className="text-xs text-gray-500">Student CRM</p>
                             </div>
                         </div>
@@ -314,7 +314,7 @@ const Page = async () => {
                     <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 mb-20">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl font-bold text-gray-900 mb-4">Trusted by Leading Institutions</h2>
-                            <p className="text-lg text-gray-600">Join hundreds of Italian educational institutions already using eItaly CRM</p>
+                            <p className="text-lg text-gray-600">Join hundreds of Italian educational institutions already using YesItaly CRM</p>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                             <div className="text-center">
@@ -339,7 +339,7 @@ const Page = async () => {
                     {/* How It Works Section */}
                     <div className="mb-20">
                         <div className="text-center mb-12">
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">How eItaly CRM Works</h2>
+                            <h2 className="text-3xl font-bold text-gray-900 mb-4">How YesItaly CRM Works</h2>
                             <p className="text-lg text-gray-600">Simple 3-step process to transform your admissions workflow</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -391,7 +391,7 @@ const Page = async () => {
                                         </div>
                                     </div>
                                     <p className="text-gray-600 mb-4">
-                                        "eItaly CRM has revolutionized how we handle student applications. The email tracking feature alone has saved us hours every week."
+                                        "YesItaly CRM has revolutionized how we handle student applications. The email tracking feature alone has saved us hours every week."
                                     </p>
                                     <div className="flex items-center">
                                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
@@ -459,7 +459,7 @@ const Page = async () => {
                     <div className="mb-20">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-                            <p className="text-lg text-gray-600">Everything you need to know about eItaly CRM</p>
+                            <p className="text-lg text-gray-600">Everything you need to know about YesItaly CRM</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <Card className="bg-white/60 backdrop-blur-sm border-0 shadow-lg">
@@ -522,7 +522,7 @@ const Page = async () => {
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-12 text-white">
                             <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Admissions Process?</h2>
                             <p className="text-xl mb-8 opacity-90">
-                                Join hundreds of institutions already using eItaly CRM to streamline their student management.
+                                Join hundreds of institutions already using YesItaly CRM to streamline their student management.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                                 <form
