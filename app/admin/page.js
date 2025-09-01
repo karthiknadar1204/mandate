@@ -29,10 +29,6 @@ const CACHE_DURATION = 5 * 60 * 1000
 export default async function AdminPage() {
   const session = await auth()
 
-  if (!session || session.user.email !== 'karthiknadar205@gmail.com') {
-    redirect('/')
-  }
-
   // Get users with their latest emails
   const users = await db.query.usersTable.findMany({
     orderBy: (users, { desc }) => [desc(users.createdAt)]
